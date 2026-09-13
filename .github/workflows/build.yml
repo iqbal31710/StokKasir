@@ -17,8 +17,8 @@ jobs:
       
       - name: Configure AndroidX
         run: |
-          echo "android.useAndroidX=true" > project/gradle.properties
-          echo "android.enableJetifier=true" >> project/gradle.properties
+          echo "android.useAndroidX=true" > project/android/gradle.properties
+          echo "android.enableJetifier=true" >> project/android/gradle.properties
       
       - name: Configure JVM 17
         run: |
