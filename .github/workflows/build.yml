@@ -14,7 +14,12 @@ jobs:
         run: |
           mkdir -p project
           unzip -o StokKasirV3-GitHub.zip -d project
-
+      
+      - name: Configure AndroidX
+        run: |
+          echo "android.useAndroidX=true" > project/gradle.properties
+          echo "android.enableJetifier=true" >> project/gradle.properties
+      
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
