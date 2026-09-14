@@ -32,9 +32,33 @@ jobs:
           echo "=== Isi folder project ==="
           ls -la project
 
-      - name: Configure AndroidX
+      - name: Configure AndroidX & JVM 17
         run: |
-          if [ -f project/android/gradle.properties ]; then
+          # Cari semua file gradle.properties di dalam project
+          find project -name "gradle.properties" -type f | while read f; do
+            echo "" >> "$f"
+            echo "android.useAndroidX=true" >> "$f"
+            echo "android.enableJetifier=true" >> "$f"
+            echo "Sudah diupdate: $f"
+          done
+
+      - name: Build APK
+        working-directory: project
+        run: |
+          chmod +x gradlew || true
+          ./gradlew assembleDebug \
+            -Pandroid.useAndroidX=true \
+            -Pandroid.enableJetifier=true \
+            --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: StokKasir-APK
+          path: |
+            project/app/build/outputs/apk/debug/*.apk
+            project/**/build/outputs/apk/debug/*.apk
+          if-no-files-found: error          if [ -f project/android/gradle.properties ]; then
             echo "android.useAndroidX=true" >> project/android/gradle.properties
             echo "android.enableJetifier=true" >> project/android/gradle.properties
           elif [ -f project/gradle.properties ]; then
