@@ -32,9 +32,44 @@ jobs:
           echo "=== Isi folder project ==="
           ls -la project
 
-      - name: Configure AndroidX & JVM 17
+      - name: Configure AndroidX
         run: |
-          # Cari semua file gradle.properties di dalam project
+          find project -name "gradle.properties" -type f | while read f; do
+            echo "" >> "$f"
+            echo "android.useAndroidX=true" >> "$f"
+            echo "android.enableJetifier=true" >> "$f"
+            echo "Sudah diupdate: $f"
+          done
+
+      - name: Build APK
+        run: |
+          GRADLEW_PATH=$(find project -name "gradlew" -type f | head -n 1)
+
+          if [ -z "$GRADLEW_PATH" ]; then
+            echo "❌ gradlew tidak ditemukan! Struktur folder project:"
+            find project -maxdepth 3 -type d
+            echo ""
+            echo "Semua file di project:"
+            find project -maxdepth 3 -type f | head -50
+            exit 1
+          fi
+
+          PROJECT_DIR=$(dirname "$GRADLEW_PATH")
+          echo "✅ Project root ditemukan di: $PROJECT_DIR"
+
+          cd "$PROJECT_DIR"
+          chmod +x gradlew
+          ./gradlew assembleDebug \
+            -Pandroid.useAndroidX=true \
+            -Pandroid.enableJetifier=true \
+            --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: StokKasir-APK
+          path: project/**/build/outputs/apk/debug/*.apk
+          if-no-files-found: error          # Cari semua file gradle.properties di dalam project
           find project -name "gradle.properties" -type f | while read f; do
             echo "" >> "$f"
             echo "android.useAndroidX=true" >> "$f"
