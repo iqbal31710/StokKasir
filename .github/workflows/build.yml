@@ -40,6 +40,38 @@ jobs:
             echo "android.enableJetifier=true" >> "$f"
             echo "Sudah diupdate: $f"
           done
+          
+          # Kalau nggak ada gradle.properties sama sekali, bikin baru di root project
+          if ! find project -name "gradle.properties" -type f | grep -q .; then
+            echo "android.useAndroidX=true" > project/gradle.properties
+            echo "android.enableJetifier=true" >> project/gradle.properties
+            echo "Dibuat baru: project/gradle.properties"
+          fi
+
+      - name: Build APK
+        working-directory: project
+        run: |
+          echo "=== Isi folder project ==="
+          ls -la
+          echo ""
+          echo "=== Mulai build ==="
+          
+          gradle assembleDebug \
+            -Pandroid.useAndroidX=true \
+            -Pandroid.enableJetifier=true \
+            --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: StokKasir-APK
+          path: project/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error          find project -name "gradle.properties" -type f | while read f; do
+            echo "" >> "$f"
+            echo "android.useAndroidX=true" >> "$f"
+            echo "android.enableJetifier=true" >> "$f"
+            echo "Sudah diupdate: $f"
+          done
 
       - name: Build APK
         run: |
