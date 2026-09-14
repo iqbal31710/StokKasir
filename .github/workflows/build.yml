@@ -1,6 +1,7 @@
 name: Build StokKasir APK
 
-on: [workflow_dispatch]
+on:
+  workflow_dispatch:
 
 jobs:
   build:
@@ -10,31 +11,57 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10'
+
       - name: Extract project ZIP
         run: |
           mkdir -p project
           unzip -o StokKasirV3-GitHub.zip -d project
-      
+          echo "=== Isi folder project ==="
+          ls -la project
+
       - name: Configure AndroidX
         run: |
-          echo "android.useAndroidX=true" > project/android/gradle.properties
-          echo "android.enableJetifier=true" >> project/android/gradle.properties
-      
-      - name: Configure JVM 17
+          if [ -f project/android/gradle.properties ]; then
+            echo "android.useAndroidX=true" >> project/android/gradle.properties
+            echo "android.enableJetifier=true" >> project/android/gradle.properties
+          elif [ -f project/gradle.properties ]; then
+            echo "android.useAndroidX=true" >> project/gradle.properties
+            echo "android.enableJetifier=true" >> project/gradle.properties
+          else
+            echo "gradle.properties tidak ditemukan, skip."
+          fi
+
+      - name: Build APK
+        working-directory: project
         run: |
-          cat >> project/app/build.gradle.kts <<'EOF'
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+            ./gradlew assembleDebug
+          else
+            gradle assembleDebug
+          fi
 
-          android {
-              compileOptions {
-                  sourceCompatibility = JavaVersion.VERSION_17
-                  targetCompatibility = JavaVersion.VERSION_17
-              }
-          }
-
-         kotlin {
-             jvmToolchain(17)
-         }
-         EOF
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: StokKasir-APK
+          path: |
+            project/app/build/outputs/apk/debug/*.apk
+            project/**/build/outputs/apk/debug/*.apk
+          if-no-files-found: error         EOF
          
       - name: Set up Java 17
         uses: actions/setup-java@v4
