@@ -32,33 +32,85 @@ jobs:
           echo "=== Isi folder project ==="
           ls -la project
 
-      - name: Configure AndroidX
+      - name: Configure gradle.properties
         run: |
-          find project -name "gradle.properties" -type f | while read f; do
-            echo "" >> "$f"
-            echo "android.useAndroidX=true" >> "$f"
-            echo "android.enableJetifier=true" >> "$f"
-            echo "Sudah diupdate: $f"
-          done
-          
-          # Kalau nggak ada gradle.properties sama sekali, bikin baru di root project
-          if ! find project -name "gradle.properties" -type f | grep -q .; then
-            echo "android.useAndroidX=true" > project/gradle.properties
-            echo "android.enableJetifier=true" >> project/gradle.properties
-            echo "Dibuat baru: project/gradle.properties"
+          cat >> project/gradle.properties << 'EOF'
+
+          android.useAndroidX=true
+          android.enableJetifier=true
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          kotlin.jvm.target.validation.mode=warning
+          EOF
+
+          echo "=== Isi gradle.properties ==="
+          cat project/gradle.properties
+
+      - name: Tambahkan JVM Target 17 ke build.gradle
+        run: |
+          # Patch app/build.gradle.kts (kalau ada)
+          if [ -f project/app/build.gradle.kts ]; then
+            cat >> project/app/build.gradle.kts << 'EOF'
+
+          // === Patch dari CI: paksa JVM target 17 ===
+          tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+              kotlinOptions {
+                  jvmTarget = "17"
+              }
+          }
+          tasks.withType<JavaCompile>().configureEach {
+              sourceCompatibility = "17"
+              targetCompatibility = "17"
+          }
+          EOF
+            echo "✅ app/build.gradle.kts dipatch"
+          fi
+
+          # Patch app/build.gradle (groovy) kalau yang ada versi .gradle
+          if [ -f project/app/build.gradle ]; then
+            cat >> project/app/build.gradle << 'EOF'
+
+          // === Patch dari CI: paksa JVM target 17 ===
+          tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+              kotlinOptions {
+                  jvmTarget = "17"
+              }
+          }
+          tasks.withType(JavaCompile).configureEach {
+              sourceCompatibility = "17"
+              targetCompatibility = "17"
+          }
+          EOF
+            echo "✅ app/build.gradle dipatch"
+          fi
+
+          # Patch root build.gradle.kts juga (kalau ada)
+          if [ -f project/build.gradle.kts ]; then
+            cat >> project/build.gradle.kts << 'EOF'
+
+          // === Patch dari CI: paksa JVM target 17 untuk semua subproject ===
+          subprojects {
+              tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+                  kotlinOptions {
+                      jvmTarget = "17"
+                  }
+              }
+              tasks.withType<JavaCompile>().configureEach {
+                  sourceCompatibility = "17"
+                  targetCompatibility = "17"
+              }
+          }
+          EOF
+            echo "✅ root build.gradle.kts dipatch"
           fi
 
       - name: Build APK
         working-directory: project
         run: |
-          echo "=== Isi folder project ==="
-          ls -la
-          echo ""
           echo "=== Mulai build ==="
-          
           gradle assembleDebug \
             -Pandroid.useAndroidX=true \
             -Pandroid.enableJetifier=true \
+            -Pkotlin.jvm.target.validation.mode=warning \
             --no-daemon
 
       - name: Upload APK
